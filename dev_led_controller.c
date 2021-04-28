@@ -31,12 +31,50 @@
 #include "hardware/clocks.h"
 #include "apa104.pio.h"
 //#include "apa104.h"
-
+#include "led_param.h"
+#include "hardware/gpio.h" //for gpio irq
 
 
 #define usb_hw_set hw_set_alias(usb_hw)
 #define usb_hw_clear hw_clear_alias(usb_hw)
 
+uint32_t test_pattern = COLOR_WHITE;
+
+void gpio_callback(uint gpio, uint32_t events);
+int32_t gpio_irq_enable(uint32_t gpio, void* callback, uint32_t condition);
+
+int64_t alarm_callback(alarm_id_t id, void *user_data) {
+    printf("Timer %d fired!\n", (int) id);
+    //timer_fired = true;
+    gpio_irq_enable(15, &gpio_callback, GPIO_IRQ_EDGE_RISE );
+    // Can return a value here in us to fire in the future
+    return 0;
+}
+
+
+void gpio_callback(uint gpio, uint32_t events) {
+    gpio_set_irq_enabled_with_callback(15, NULL, false, NULL);
+    printf("%s\n", __func__);
+    if(test_pattern == COLOR_WHITE){
+    	test_pattern = COLOR_RED;
+	printf("RED!\n");
+    }else if(test_pattern == COLOR_RED){
+    	test_pattern = COLOR_GREEN;
+	printf("GREEN!\n");
+    }else if(test_pattern == COLOR_GREEN){
+    	test_pattern = COLOR_BLUE;
+	printf("BLUE!\n");
+    }else if(test_pattern == COLOR_BLUE){
+    	test_pattern = COLOR_WHITE;
+	printf("WHITE!\n");
+    }
+    add_alarm_in_ms(2000, alarm_callback, NULL, false);
+
+}
+
+int32_t gpio_irq_enable(uint32_t gpio, void* callback, uint32_t condition) {
+    gpio_set_irq_enabled_with_callback(gpio, condition, true, callback);
+}
 
 // add for LED apa104 control
 int LED_WIDTH = 40;
@@ -619,6 +657,10 @@ int main(void) {
     printf("USB Device Low-Level hardware example\n");
     usb_device_init();
     pio_initial();
+    int ret = gpio_get_dir(15);
+    printf("gpio 15 dir is %d\n", ret); //default is in
+    gpio_pull_up(15);
+    gpio_irq_enable(15, &gpio_callback, GPIO_IRQ_EDGE_RISE );
     // Wait until configured
     while (!configured) {
         tight_loop_contents();
@@ -633,7 +675,7 @@ int main(void) {
 	//test pattern
 	for(int i = 0; i < LED_WIDTH; i++){
 	    for(int j = 0; j < LED_HEIGHT; j++){
-	    	put_pixel(0xffffff);
+	    	put_pixel(test_pattern);
 	    }
 	}
 	sleep_ms(1000);
