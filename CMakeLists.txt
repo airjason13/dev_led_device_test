@@ -1,5 +1,5 @@
 add_executable(dev_led_controller
-        dev_lowlevel.c
+        dev_led_controller.c
         )
 
 # generate the header file into the source tree as it is included in the RP2040 datasheet

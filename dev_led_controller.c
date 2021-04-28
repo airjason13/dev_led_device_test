@@ -30,12 +30,68 @@
 #include "hardware/pio.h"
 #include "hardware/clocks.h"
 #include "apa104.pio.h"
-
+//#include "apa104.h"
 
 
 
 #define usb_hw_set hw_set_alias(usb_hw)
 #define usb_hw_clear hw_clear_alias(usb_hw)
+
+
+// add for LED apa104 control
+int LED_WIDTH = 40;
+int LED_HEIGHT = 24;
+const int PIN_TX_0 = 4;
+const int PIN_TX_1 = 5;
+const int PIN_TX_2 = 6;
+const int PIN_TX_3 = 7;
+
+const int PIN_TX_4 = 16;
+const int PIN_TX_5 = 17;
+const int PIN_TX_6 = 18;
+const int PIN_TX_7 = 19;
+//PIO pio_0 = pio0
+//PIO pio_1 = pio1
+
+static inline void put_pixel(uint32_t pixel_grb) {
+    pio_sm_put_blocking(pio0, 0, pixel_grb << 8u);
+    pio_sm_put_blocking(pio0, 1, pixel_grb << 8u);
+    pio_sm_put_blocking(pio0, 2, pixel_grb << 8u);
+    pio_sm_put_blocking(pio0, 3, pixel_grb << 8u);
+    pio_sm_put_blocking(pio1, 0, pixel_grb << 8u);
+    pio_sm_put_blocking(pio1, 1, pixel_grb << 8u);
+    pio_sm_put_blocking(pio1, 2, pixel_grb << 8u);
+    pio_sm_put_blocking(pio1, 3, pixel_grb << 8u);
+}
+
+static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b) {
+    return
+            ((uint32_t) (r) << 8) |
+            ((uint32_t) (g) << 16) |
+            (uint32_t) (b);
+}
+
+static int32_t pio_initial() {
+
+    //pio0 4 sm port
+    PIO pio = pio0;
+    int sm = 0;
+    uint offset = pio_add_program(pio, &ws2812_program);
+    ws2812_program_init(pio, sm, offset, PIN_TX_0, 800000, false);
+    ws2812_program_init(pio, sm+1, offset, PIN_TX_1, 800000, false);
+    ws2812_program_init(pio, sm+2, offset, PIN_TX_2, 800000, false);
+    ws2812_program_init(pio, sm+3, offset, PIN_TX_3, 800000, false);
+    
+    //pio0 4 sm port
+    PIO pio_1 = pio1;
+    int sm_1 = 0;
+    uint offset_1 = pio_add_program(pio1, &ws2812_program);
+    ws2812_program_init(pio_1, sm_1, offset_1, PIN_TX_4, 800000, false);
+    ws2812_program_init(pio_1, sm_1+1, offset_1, PIN_TX_5, 800000, false);
+    ws2812_program_init(pio_1, sm_1+2, offset_1, PIN_TX_6, 800000, false);
+    ws2812_program_init(pio_1, sm_1+3, offset_1, PIN_TX_7, 800000, false);
+    return 0;
+}
 
 // Function prototypes for our device specific endpoint handlers defined
 // later on
@@ -562,7 +618,7 @@ int main(void) {
     stdio_init_all();
     printf("USB Device Low-Level hardware example\n");
     usb_device_init();
-
+    pio_initial();
     // Wait until configured
     while (!configured) {
         tight_loop_contents();
@@ -573,7 +629,14 @@ int main(void) {
 
     // Everything is interrupt driven so just loop here
     while (1) {
-        tight_loop_contents();
+        //tight_loop_contents(); //marked this busy loop
+	//test pattern
+	for(int i = 0; i < LED_WIDTH; i++){
+	    for(int j = 0; j < LED_HEIGHT; j++){
+	    	put_pixel(0xffffff);
+	    }
+	}
+	sleep_ms(1000);
     }
 
     return 0;
