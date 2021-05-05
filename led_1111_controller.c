@@ -33,7 +33,7 @@
 //#include "apa104.h"
 #include "led_param.h"
 #include "hardware/gpio.h" //for gpio irq
-
+#include "cmd_parser.h"
 
 #define usb_hw_set hw_set_alias(usb_hw)
 #define usb_hw_clear hw_clear_alias(usb_hw)
@@ -343,7 +343,7 @@ void usb_start_transfer(struct usb_endpoint_configuration *ep, uint8_t *buf, uin
     // For multi packet transfers see the tinyusb port.
     assert(len <= 64);
 
-    printf("Start transfer of len %d on ep addr 0x%x\n", len, ep->descriptor->bEndpointAddress);
+    //printf("Start transfer of len %d on ep addr 0x%x\n", len, ep->descriptor->bEndpointAddress);
 
     // Prepare buffer control register value
     uint32_t val = len | USB_BUF_CTRL_AVAIL;
@@ -544,7 +544,7 @@ static void usb_handle_ep_buff_done(struct usb_endpoint_configuration *ep) {
  */
 static void usb_handle_buff_done(uint ep_num, bool in) {
     uint8_t ep_addr = ep_num | (in ? USB_DIR_IN : 0);
-    printf("EP %d (in = %d) done\n", ep_num, in);
+    //printf("EP %d (in = %d) done\n", ep_num, in);
     for (uint i = 0; i < USB_NUM_ENDPOINTS; i++) {
         struct usb_endpoint_configuration *ep = &dev_config.endpoints[i];
         if (ep->descriptor && ep->handler) {
@@ -638,12 +638,20 @@ void ep0_out_handler(uint8_t *buf, uint16_t len) {
     ;
 }
 
+uint8_t tmp_buf[64];
 // Device specific functions
 void ep1_out_handler(uint8_t *buf, uint16_t len) {
-    printf("RX %d bytes from host\n", len);
+    //printf("RX %d bytes from host\n", len);
+
+    	
+    //memcpy(tmp_buf, buf, len);	
+    printf("got : \n %s\n", buf);
+    cmd_parser(buf);
+    memset(buf, 0, 64);
+    usb_start_transfer(usb_get_endpoint_configuration(EP1_OUT_ADDR), NULL, 64);
     // Send data back to host
-    struct usb_endpoint_configuration *ep = usb_get_endpoint_configuration(EP2_IN_ADDR);
-    usb_start_transfer(ep, buf, len);
+    //struct usb_endpoint_configuration *ep = usb_get_endpoint_configuration(EP2_IN_ADDR);
+    //usb_start_transfer(ep, buf, len);
 }
 
 void ep2_in_handler(uint8_t *buf, uint16_t len) {

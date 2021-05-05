@@ -43,6 +43,6 @@ assert outep is not None
 
 test_string = "Hello World!"
 outep.write(test_string)
-from_device = inep.read(len(test_string))
+#from_device = inep.read(len(test_string))
 
-print("Device Says: {}".format(''.join([chr(x) for x in from_device])))
+#print("Device Says: {}".format(''.join([chr(x) for x in from_device])))
