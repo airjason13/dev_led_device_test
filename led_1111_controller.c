@@ -5,7 +5,7 @@
  */
 
 #include <stdio.h>
-
+#include "zlib.h"
 // Pico
 #include "pico/stdlib.h"
 
@@ -39,6 +39,8 @@
 #define usb_hw_clear hw_clear_alias(usb_hw)
 
 uint32_t test_pattern = COLOR_WHITE;
+int32_t led_select = -1;//-1 means all
+
 
 void gpio_callback(uint gpio, uint32_t events);
 int32_t gpio_irq_enable(uint32_t gpio, void* callback, uint32_t condition);
@@ -680,13 +682,28 @@ int main(void) {
     // Everything is interrupt driven so just loop here
     while (1) {
         //tight_loop_contents(); //marked this busy loop
+#if 1
+	    for(int i = 0 ; i < 960; i++){
+            if(led_select == -1){
+	    	    put_pixel(test_pattern);
+            }else{
+		        if(i == led_select){
+	    	        put_pixel(test_pattern);
+		        }else{
+	    	        put_pixel(0x000000);
+		        }
+            }
+	    }
+	    sleep_ms(100);
+#else
 	//test pattern
 	for(int i = 0; i < LED_WIDTH; i++){
 	    for(int j = 0; j < LED_HEIGHT; j++){
 	    	put_pixel(test_pattern);
 	    }
 	}
-	sleep_ms(1000);
+	sleep_ms(100);
+#endif	
     }
 
     return 0;

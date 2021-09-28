@@ -1,6 +1,7 @@
 add_executable(led_1111_controller
         led_1111_controller.c
-	cmd_parser.c
+	    cmd_parser.c
+        gzlib.c
         )
 
 # generate the header file into the source tree as it is included in the RP2040 datasheet
