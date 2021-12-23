@@ -41,6 +41,22 @@
 uint32_t test_pattern = COLOR_WHITE;
 int32_t led_select = -1;//-1 means all
 
+int32_t led_lighting_mode = LED_NORMAL_MODE; //分區或是全部點亮
+
+//move to led_param.h
+//#define LED_NUM         1000
+//#define LED_CHANNELS    3
+//#define LED_PORTS       8
+uint8_t led_patterns[LED_PORTS][LED_NUM][LED_CHANNELS] = {0};
+//int LED_WIDTH = 40;
+//int LED_HEIGHT = 24;
+uint32_t led_total_width = LED_WIDTH;
+uint32_t led_total_height = LED_HEIGHT;
+int32_t led_area_startx = 5;
+int32_t led_area_starty = 1;
+int32_t led_area_width = 10;
+int32_t led_area_height = 5;
+
 
 void gpio_callback(uint gpio, uint32_t events);
 int32_t gpio_irq_enable(uint32_t gpio, void* callback, uint32_t condition);
@@ -79,8 +95,6 @@ int32_t gpio_irq_enable(uint32_t gpio, void* callback, uint32_t condition) {
 }
 
 // add for LED apa104 control
-int LED_WIDTH = 40;
-int LED_HEIGHT = 24;
 const int PIN_TX_0 = 4;
 const int PIN_TX_1 = 5;
 const int PIN_TX_2 = 6;
@@ -103,6 +117,39 @@ static inline void put_pixel(uint32_t pixel_grb) {
     pio_sm_put_blocking(pio1, 2, pixel_grb << 8u);
     pio_sm_put_blocking(pio1, 3, pixel_grb << 8u);
 }
+
+static inline void put_pixel_by_panel(uint8_t panel_id, uint32_t pixel_grb) {
+    switch(panel_id){
+        case 0:
+            pio_sm_put_blocking(pio0, 0, pixel_grb << 8u);
+            break;
+        case 1:
+            pio_sm_put_blocking(pio0, 1, pixel_grb << 8u);
+            break;
+        case 2:
+            pio_sm_put_blocking(pio0, 2, pixel_grb << 8u);
+            break;
+        case 3:
+            pio_sm_put_blocking(pio0, 3, pixel_grb << 8u);
+            break;
+        case 4:
+            pio_sm_put_blocking(pio1, 0, pixel_grb << 8u);
+            break;
+        case 5:
+            pio_sm_put_blocking(pio1, 1, pixel_grb << 8u);
+            break;
+        case 6:
+            pio_sm_put_blocking(pio1, 2, pixel_grb << 8u);
+            break;
+        case 7:
+            pio_sm_put_blocking(pio1, 3, pixel_grb << 8u);
+            break;
+        default:
+            printf("error!no such panel id: %d\n", panel_id);
+            break;
+    }
+}
+
 
 static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b) {
     return
@@ -663,6 +710,8 @@ void ep2_in_handler(uint8_t *buf, uint16_t len) {
 }
 
 int main(void) {
+    int i, j, k;
+    uint8_t tmp_color = 0x01;
     stdio_init_all();
     printf("USB Device Low-Level hardware example\n");
     usb_device_init();
@@ -675,14 +724,21 @@ int main(void) {
     while (!configured) {
         tight_loop_contents();
     }
-
+    for(j = 0; j < LED_PORTS; j++){    
+        for(i = 0; i < LED_NUM; i++){
+            for(k = 0; k < LED_CHANNELS; k++){
+                led_patterns[j][i][k] = 0x10; 
+            }
+        }
+    }
     // Get ready to rx from host
     usb_start_transfer(usb_get_endpoint_configuration(EP1_OUT_ADDR), NULL, 64);
 
     // Everything is interrupt driven so just loop here
     while (1) {
         //tight_loop_contents(); //marked this busy loop
-#if 1
+#if 0
+        test_pattern = 0x101010;
 	    for(int i = 0 ; i < 960; i++){
             if(led_select == -1){
 	    	    put_pixel(test_pattern);
@@ -696,13 +752,55 @@ int main(void) {
 	    }
 	    sleep_ms(100);
 #else
-	//test pattern
-	for(int i = 0; i < LED_WIDTH; i++){
-	    for(int j = 0; j < LED_HEIGHT; j++){
-	    	put_pixel(test_pattern);
-	    }
-	}
-	sleep_ms(100);
+        
+        /*for(j = 0; j < LED_PORTS; j++){    
+            for(i = 0; i < LED_NUM; i++){
+                for(k = 0; k < LED_CHANNELS; k++){
+                    led_patterns[j][i][k] = tmp_color; 
+                }
+            }
+        }
+        tmp_color += 1;
+        if(tmp_color > 0x40){
+            tmp_color = 0x01;
+        }*/
+	    //test pattern
+        if(led_lighting_mode == LED_NORMAL_MODE){
+	        for(i = 0; i < LED_WIDTH; i++){
+	            for(j = 0; j < LED_HEIGHT; j++){
+                    for(k = 0; k < LED_PORTS; k++){
+                        test_pattern = led_patterns[k][((j*LED_WIDTH) + i)][0] << 16 |  //g
+                                        led_patterns[k][((j*LED_WIDTH) + i)][1] << 8 |  //r
+                                        led_patterns[k][((j*LED_WIDTH) + i)][2] ;       //b
+	    	            put_pixel_by_panel(k, test_pattern);
+                    }
+	            }
+	        }
+            sleep_ms(10);
+        }else{
+            printf("led_total_width = %d\n", led_total_width);
+            printf("led_total_height = %d\n", led_total_height);
+	        for(i = 0; i < led_total_width; i++){
+	            for(j = 0; j < led_total_height; j++){
+                    for(k = 0; k < LED_PORTS; k++){
+                        /*if(((j >= led_area_starty)&&(j < (led_area_starty + led_area_height)))
+                            &&((i >= led_area_startx)&&(i <= (led_area_startx + led_area_width)))){
+                                test_pattern = led_patterns[k][((j*led_total_width) + i)][0] << 16 |  //g
+                                            led_patterns[k][((j*led_total_width) + i)][1] << 8 |  //r
+                                            led_patterns[k][((j*led_total_width) + i)][2] ;       //b
+                        */
+                            test_pattern = led_patterns[k][((j*led_total_width) + i)][0] << 16 |  //g
+                                            led_patterns[k][((j*led_total_width) + i)][1] << 8 |  //r
+                                            led_patterns[k][((j*led_total_width) + i)][2] ;       //b
+
+	    	            put_pixel_by_panel(k, test_pattern);
+
+                    }
+	            }
+	        }        
+	        sleep_ms(10);
+        }
+	    //sleep_ms(100);
 #endif	
     }
 
