@@ -4,6 +4,7 @@
 #include "pico/sem.h"
 extern struct semaphore led_frame_sem;
 extern bool b_clear_led_frame;
+extern bool b_set_current_gain;
 extern uint32_t test_pattern;
 extern int32_t led_select;
 extern int32_t led_lighting_mode;
@@ -35,54 +36,39 @@ int cmd_parser(uint8_t *buf){
     }
     
     if(strstr(buf, "set_total_width")){
-       //sem_acquire_blocking(&led_frame_sem);
        sscanf(buf, "%s %d", cmd, &led_total_width);
-       //b_clear_led_frame = true;
-       //sem_release(&led_frame_sem);
        printf("led_total_width:%d\n", led_total_width);
     }
     
     if(strstr(buf, "set_total_height")){
-       //sem_acquire_blocking(&led_frame_sem);
        sscanf(buf, "%s %d", cmd, &led_total_height);
-       //b_clear_led_frame = true;
-       //sem_release(&led_frame_sem);
        printf("led_total_height:%d\n", led_total_height);
     }
     
     if(strstr(buf, "set_area_startx")){
-       //sem_acquire_blocking(&led_frame_sem);
        sscanf(buf, "%s %d", cmd, &led_area_startx);
-       //b_clear_led_frame = true;
-       //sem_release(&led_frame_sem);
        printf("led_total_height:%d\n", led_area_startx);
     }
     
     if(strstr(buf, "set_area_starty")){
-       //sem_acquire_blocking(&led_frame_sem);
        sscanf(buf, "%s %d", cmd, &led_area_starty);
-       //b_clear_led_frame = true;
-       //sem_release(&led_frame_sem);
        printf("led_total_height:%d\n", led_area_starty);
     }
     
     if(strstr(buf, "set_area_width")){
-       //sem_acquire_blocking(&led_frame_sem);
        sscanf(buf, "%s %d", cmd, &led_area_width);
-       //b_clear_led_frame = true;
-       //sem_release(&led_frame_sem);
        printf("led_total_height:%d\n", led_area_width);
     }
     
     if(strstr(buf, "set_area_height")){
-       //sem_acquire_blocking(&led_frame_sem);
        sscanf(buf, "%s %d", cmd, &led_area_height);
-       //b_clear_led_frame = true;
-       //sem_release(&led_frame_sem);
        printf("led_total_height:%d\n", led_area_width);
     }
     
-    
+    if(strstr(buf, "set_current_gain:")){
+        b_set_current_gain = true;
+        printf("set_current_gain!\n");
+    }    
 
     if(!strcmp("test_color:white", buf)){
 	    led_color = WHITE;    

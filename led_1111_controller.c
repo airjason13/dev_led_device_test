@@ -37,6 +37,7 @@
 #include "pico/sem.h"
 struct semaphore led_frame_sem;
 bool b_clear_led_frame = false;
+bool b_set_current_gain = false;
 #define usb_hw_set hw_set_alias(usb_hw)
 #define usb_hw_clear hw_clear_alias(usb_hw)
 
@@ -711,6 +712,39 @@ void ep2_in_handler(uint8_t *buf, uint16_t len) {
     usb_start_transfer(usb_get_endpoint_configuration(EP1_OUT_ADDR), NULL, 64);
 }
 
+void set_current_gain(int gain_value){
+    gpio_init(4);
+    gpio_init(5);
+    gpio_set_dir(4, true);
+    gpio_set_dir(5, true);
+    gpio_put(4, 0);
+    gpio_put(5, 0);
+    sleep_us(250);
+
+    gpio_put(4, 1);
+    gpio_put(5, 1);
+    sleep_us(20);
+
+    gpio_put(4, 0);
+    gpio_put(5, 0);
+    sleep_us(250);
+
+    //gpio_put(4, 1);
+    //gpio_put(5, 1);
+    //sleep_us(80);
+
+
+    pio_initial();
+    for(int j = 0; j < 8; j++){
+        int pattern = 0xff0000;//led_cmd[0][j][1] << 16 | led_cmd[0][j][0] << 8 | led_cmd[0][j][2] << 0;
+        put_pixel_by_panel(j, pattern);
+    }
+    
+    sleep_ms(1);
+
+}
+
+
 int main(void) {
     int i, j, k;
     uint8_t tmp_color = 0x01;
@@ -739,23 +773,18 @@ int main(void) {
 
     // Everything is interrupt driven so just loop here
     while (1) {
+                    
+
         //tight_loop_contents(); //marked this busy loop
-#if 0
-        test_pattern = 0x101010;
-	    for(int i = 0 ; i < 960; i++){
-            if(led_select == -1){
-	    	    put_pixel(test_pattern);
-            }else{
-		        if(i == led_select){
-	    	        put_pixel(test_pattern);
-		        }else{
-	    	        put_pixel(0x000000);
-		        }
-            }
-	    }
-	    sleep_ms(100);
-#else
         sem_acquire_blocking(&led_frame_sem);
+        if(b_set_current_gain == true){
+            set_current_gain(0xff);
+            b_set_current_gain = false;
+            sem_release(&led_frame_sem);
+            printf("set current gain\n");
+            continue;
+        }
+
         if(b_clear_led_frame == true){
 	        for(i = 0; i < 40; i++){
 	            for(j = 0; j < 24; j++){
@@ -788,12 +817,12 @@ int main(void) {
 	        }
             sleep_ms(10);
         }else{
-            printf("led_total_width = %d\n", led_total_width);
+            /*printf("led_total_width = %d\n", led_total_width);
             printf("led_total_height = %d\n", led_total_height);
             printf("led_area_startx = %d\n", led_area_startx);
             printf("led_area_starty = %d\n", led_area_starty);
             printf("led_area_width = %d\n", led_area_width);
-            printf("led_area_height = %d\n", led_area_height);
+            printf("led_area_height = %d\n", led_area_height);*/
 	        for(j = 0; j < led_total_height; j++){
 	            for(i = 0; i < led_total_width; i++){
                     for(k = 0; k < LED_PORTS; k++){
@@ -833,8 +862,6 @@ int main(void) {
 	        }        
 	        sleep_ms(10);
         }
-	    //sleep_ms(100);
-#endif	
     }
 
     return 0;
