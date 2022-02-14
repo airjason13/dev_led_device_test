@@ -59,6 +59,8 @@ int32_t led_area_startx = 0;
 int32_t led_area_starty = 0;
 int32_t led_area_width = LED_WIDTH;
 int32_t led_area_height = LED_HEIGHT;
+static uint pio0_program_offset = 0;
+static uint pio1_program_offset = 0;
 
 
 void gpio_callback(uint gpio, uint32_t events);
@@ -161,12 +163,54 @@ static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b) {
             (uint32_t) (b);
 }
 
+static int32_t pio_initial_freq(int freq) {
+
+    //pio0 4 sm port
+    PIO pio = pio0;
+    int sm = 0;
+    if(pio0_program_offset != 0){
+        printf("ready to remove pio0_program_offset = 0x%x\n", pio0_program_offset);
+        pio_remove_program(pio, &ws2812_program, pio0_program_offset);
+        pio_clear_instruction_memory(pio0);
+    }
+    uint offset = pio_add_program(pio, &ws2812_program);
+    //pio0_program_offset = offset;
+    printf("pio0_program_offset = 0x%x\n", pio0_program_offset);
+    ws2812_program_init(pio, sm, offset, PIN_TX_0, freq, false);
+    printf("tx0 offset = 0x%x\n", offset);
+    ws2812_program_init(pio, sm+1, offset, PIN_TX_1, freq, false);
+    printf("tx1 offset = 0x%x\n", offset);
+    ws2812_program_init(pio, sm+2, offset, PIN_TX_2, freq, false);
+    ws2812_program_init(pio, sm+3, offset, PIN_TX_3, freq, false);
+    
+    //pio0 4 sm port
+    PIO pio_1 = pio1;
+    int sm_1 = 0;
+    if(pio1_program_offset != 0){
+        pio_remove_program(pio_1, &ws2812_program, pio1_program_offset);
+        pio_clear_instruction_memory(pio1);
+    }
+    uint offset_1 = pio_add_program(pio1, &ws2812_program);
+    //pio1_program_offse = offset_1;
+    ws2812_program_init(pio_1, sm_1, offset_1, PIN_TX_4, freq, false);
+    ws2812_program_init(pio_1, sm_1+1, offset_1, PIN_TX_5, freq, false);
+    ws2812_program_init(pio_1, sm_1+2, offset_1, PIN_TX_6, freq, false);
+    ws2812_program_init(pio_1, sm_1+3, offset_1, PIN_TX_7, freq, false);
+    return 0;
+}
+
 static int32_t pio_initial() {
 
     //pio0 4 sm port
     PIO pio = pio0;
     int sm = 0;
+    if(pio0_program_offset != 0){
+        pio_remove_program(pio, &ws2812_program, pio0_program_offset);
+        pio_clear_instruction_memory(pio);
+    }
     uint offset = pio_add_program(pio, &ws2812_program);
+    pio0_program_offset = offset;
+    printf("pio0_program_offset = 0x%x\n", pio0_program_offset);
     ws2812_program_init(pio, sm, offset, PIN_TX_0, 800000, false);
     ws2812_program_init(pio, sm+1, offset, PIN_TX_1, 800000, false);
     ws2812_program_init(pio, sm+2, offset, PIN_TX_2, 800000, false);
@@ -175,7 +219,13 @@ static int32_t pio_initial() {
     //pio0 4 sm port
     PIO pio_1 = pio1;
     int sm_1 = 0;
+    //uint offset_1 = pio_add_program(pio1, &ws2812_program);
+    if(pio1_program_offset != 0){
+        pio_remove_program(pio_1, &ws2812_program, pio1_program_offset);
+        pio_clear_instruction_memory(pio1);
+    }
     uint offset_1 = pio_add_program(pio1, &ws2812_program);
+    pio1_program_offset = offset_1;
     ws2812_program_init(pio_1, sm_1, offset_1, PIN_TX_4, 800000, false);
     ws2812_program_init(pio_1, sm_1+1, offset_1, PIN_TX_5, 800000, false);
     ws2812_program_init(pio_1, sm_1+2, offset_1, PIN_TX_6, 800000, false);
@@ -732,22 +782,20 @@ void set_current_gain(int gain_value){
     //gpio_put(4, 1);
     //gpio_put(5, 1);
     //sleep_us(80);
-
-
+    
     pio_initial();
     for(int j = 0; j < 8; j++){
         int pattern = 0xff0000;//led_cmd[0][j][1] << 16 | led_cmd[0][j][0] << 8 | led_cmd[0][j][2] << 0;
         put_pixel_by_panel(j, pattern);
     }
     
-    sleep_ms(1);
+    //sleep_ms(1);
 
 }
 
 
 int main(void) {
     int i, j, k;
-    uint8_t tmp_color = 0x01;
     stdio_init_all();
     printf("USB Device Low-Level hardware example\n");
     usb_device_init();
@@ -773,17 +821,16 @@ int main(void) {
 
     // Everything is interrupt driven so just loop here
     while (1) {
-                    
-
         //tight_loop_contents(); //marked this busy loop
-        sem_acquire_blocking(&led_frame_sem);
+        //sem_acquire_blocking(&led_frame_sem);
         if(b_set_current_gain == true){
             set_current_gain(0xff);
             b_set_current_gain = false;
-            sem_release(&led_frame_sem);
+            //sem_release(&led_frame_sem);
             printf("set current gain\n");
             continue;
         }
+        //sem_acquire_blocking(&led_frame_sem);
 
         if(b_clear_led_frame == true){
 	        for(i = 0; i < 40; i++){
@@ -797,11 +844,11 @@ int main(void) {
             sleep_ms(10);
                 
             b_clear_led_frame = false;
-            sem_release(&led_frame_sem);
+            //sem_release(&led_frame_sem);
             printf("clear frame\n");
             continue;
         }
-        sem_release(&led_frame_sem);
+        //sem_release(&led_frame_sem);
  
 	    //test pattern
         if(led_lighting_mode == LED_NORMAL_MODE){

@@ -67,7 +67,6 @@ int cmd_parser(uint8_t *buf){
     
     if(strstr(buf, "set_current_gain:")){
         b_set_current_gain = true;
-        printf("set_current_gain!\n");
     }    
 
     if(!strcmp("test_color:white", buf)){
@@ -91,18 +90,6 @@ int cmd_parser(uint8_t *buf){
         sem_release(&led_frame_sem);
     }	   
     
-#ifdef LED_1111
-    //depreciated, need to implement new method
-    if(led_color == WHITE){
-    	test_pattern = br_level << 16 | br_level << 8 | br_level;
-    }else if(led_color == RED){
-    	test_pattern = br_level << 16 & 0xff0000;
-    }else if(led_color == GREEN){
-    	test_pattern = br_level << 8 & 0xff00;
-    }else if(led_color == BLUE){
-    	test_pattern = br_level  & 0xff;
-    }
-#else
     if(led_color == WHITE){
         for(j = 0; j < LED_PORTS; j++){    
             for(i = 0; i < LED_NUM; i++){
@@ -152,7 +139,5 @@ int cmd_parser(uint8_t *buf){
     
     }
 
-#endif
-    printf("test_pattern = 0x%x\n", test_pattern);
     return 0;
 }
