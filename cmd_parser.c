@@ -16,6 +16,8 @@ extern int32_t led_area_starty;
 extern int32_t led_area_width;
 extern int32_t led_area_height;
 
+extern uint32_t led_gain;
+
 uint8_t br_level = 0x40;
 uint32_t led_color = RED;
 int cmd_parser(uint8_t *buf){
@@ -67,6 +69,11 @@ int cmd_parser(uint8_t *buf){
     
     if(strstr(buf, "set_current_gain:")){
         b_set_current_gain = true;
+        sscanf(buf, "%s %d", cmd, &led_gain);
+        printf("led_gain:%d\n", led_gain);
+        printf("led_gain:0x%x\n", led_gain);
+        
+        
     }    
 
     if(!strcmp("test_color:white", buf)){

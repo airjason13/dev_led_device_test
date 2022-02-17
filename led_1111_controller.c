@@ -62,6 +62,8 @@ int32_t led_area_height = LED_HEIGHT;
 static uint pio0_program_offset = 0;
 static uint pio1_program_offset = 0;
 
+uint32_t led_gain = 0x0f0f0f;
+
 
 void gpio_callback(uint gpio, uint32_t events);
 int32_t gpio_irq_enable(uint32_t gpio, void* callback, uint32_t condition);
@@ -785,7 +787,7 @@ void set_current_gain(int gain_value){
     
     pio_initial();
     for(int j = 0; j < 8; j++){
-        int pattern = 0xff0000;//led_cmd[0][j][1] << 16 | led_cmd[0][j][0] << 8 | led_cmd[0][j][2] << 0;
+        int pattern = gain_value;//led_cmd[0][j][1] << 16 | led_cmd[0][j][0] << 8 | led_cmd[0][j][2] << 0;
         put_pixel_by_panel(j, pattern);
     }
     
@@ -824,7 +826,8 @@ int main(void) {
         //tight_loop_contents(); //marked this busy loop
         //sem_acquire_blocking(&led_frame_sem);
         if(b_set_current_gain == true){
-            set_current_gain(0xff);
+            set_current_gain(led_gain);
+     
             b_set_current_gain = false;
             //sem_release(&led_frame_sem);
             printf("set current gain\n");
